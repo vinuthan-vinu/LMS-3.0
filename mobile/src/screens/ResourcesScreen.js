@@ -27,6 +27,14 @@ const ResourceItem = ({ theme, title, course, date, sizeLabel, type, url }) => {
     if (!url) return showAlert('Unavailable', 'This resource has no link yet.');
     try {
       const fullUrl = resolveAssetUrl(url);
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        const absoluteUrl = new URL(fullUrl, window.location.href).toString();
+        const opened = window.open(absoluteUrl, '_blank', 'noopener,noreferrer');
+        if (!opened) {
+          window.location.assign(absoluteUrl);
+        }
+        return;
+      }
       await Linking.openURL(fullUrl);
     } catch {
       showAlert('Error', 'Could not open resource.');

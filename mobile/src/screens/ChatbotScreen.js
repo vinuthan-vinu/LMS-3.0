@@ -14,8 +14,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import apiClient from '../api/client';
 import { showAlert, showConfirm } from '../utils/webAlert';
 import { useTheme, cardShadowStyle } from '../context/ThemeContext';
-import Voice from '@react-native-voice/voice';
-import Tts from 'react-native-tts';
+import * as Speech from 'expo-speech';
 
 const ChatbotScreen = () => {
   const { theme } = useTheme();
@@ -29,41 +28,14 @@ const ChatbotScreen = () => {
   const [isListening, setIsListening] = useState(false);
 
   useEffect(() => {
-    if (Platform.OS !== 'web') {
-      Voice.onSpeechStart = () => setIsListening(true);
-      Voice.onSpeechEnd = () => setIsListening(false);
-      Voice.onSpeechError = (e) => {
-        setIsListening(false);
-        console.log('Voice Error:', e);
-      };
-      Voice.onSpeechResults = (e) => {
-        if (e.value && e.value.length > 0) {
-          setInputText(e.value[0]);
-        }
-      };
-      
-      Tts.setDefaultLanguage('en-US');
-      Tts.setDefaultRate(0.5);
-      Tts.setDefaultPitch(1.0);
-
-      return () => {
-        Voice.destroy().then(Voice.removeAllListeners);
-        Tts.stop();
-      };
-    }
+    return () => {
+      Speech.stop();
+    };
   }, []);
 
   const startVoiceInput = async () => {
     if (isListening) {
-      if (Platform.OS !== 'web') {
-        try {
-          await Voice.stop();
-        } catch (e) {
-          console.error(e);
-        }
-      } else {
-        setIsListening(false);
-      }
+      setIsListening(false);
       return;
     }
 
@@ -84,15 +56,6 @@ const ChatbotScreen = () => {
       };
       recognition.onend = () => setIsListening(false);
       recognition.start();
-    } else if (Platform.OS !== 'web') {
-      try {
-        setIsListening(true);
-        await Voice.start('en-US');
-      } catch (e) {
-        setIsListening(false);
-        console.error('Voice Start Error:', e);
-        showAlert('Voice Error', 'Speech recognition is not available or permission denied.');
-      }
     } else {
       showAlert('Voice Input', 'Voice input is not supported on this device/browser.');
     }
@@ -150,9 +113,13 @@ const ChatbotScreen = () => {
       utterance.lang = 'en-US';
       window.speechSynthesis.cancel(); // stop any previous speech
       window.speechSynthesis.speak(utterance);
-    } else if (Platform.OS !== 'web') {
-      Tts.stop();
-      Tts.speak(clean);
+    } else {
+      Speech.stop();
+      Speech.speak(clean, {
+        language: 'en-US',
+        rate: 1.0,
+        pitch: 1.0,
+      });
     }
   };
 
