@@ -168,7 +168,30 @@ exports.handleChat = async (req, res) => {
     }
     // --- Static keyword matching ---
     else {
-      botResponse = getStaticResponse(text) || '🤔 I\'m not sure I understand that. Try asking about:\n• **courses** — browse & enroll\n• **exams** — take tests & see results\n• **payment** — upload proof\n• **schedule** — class timetable\n• **resources** — study materials\n• **help** — see all features\n\nOr type **"help"** to see everything I can do!';
+      const staticResponse = getStaticResponse(text);
+      if (staticResponse) {
+        botResponse = staticResponse;
+      } else if (process.env.GEMINI_API_KEY) {
+        // --- Dynamic: Gemini AI ---
+        try {
+          const axios = require('axios');
+          const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
+          const response = await axios.post(geminiUrl, {
+            contents: [{
+              parts: [{
+                text: `You are an LMS Assistant for an online learning platform. Answer this user question as a helpful educational bot. Keep it concise (under 3 sentences if possible). User asked: ${text}`
+              }]
+            }]
+          }, { timeout: 10000 });
+          
+          botResponse = response.data?.candidates?.[0]?.content?.parts?.[0]?.text || '🤔 I\'m having trouble thinking right now. Please try again later!';
+        } catch (error) {
+          console.error('Gemini Error:', error.message);
+          botResponse = '🤔 I\'m not sure I understand that. Try asking about courses, exams, or type "help" to see what I can do!';
+        }
+      } else {
+        botResponse = '🤔 I\'m not sure I understand that. Try asking about courses, exams, or type "help" to see what I can do!';
+      }
     }
 
     chat.messages.push({ sender: 'User', text });
